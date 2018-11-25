@@ -15,7 +15,7 @@ namespace DonorTag
 		name = "DonorTag",
 		description = "Gives donors fancy tags",
 		id = "com.thecreepercow.donortag",
-		version = "4.2.10",
+		version = "4.2.11",
 		SmodMajor = 3,
 		SmodMinor = 1,
 		SmodRevision = 17)]
@@ -59,12 +59,12 @@ namespace DonorTag
 				while (!reader.EndOfData)
 				{
 					string[] donorParts = reader.ReadFields();
-					if (counter == 0)
+					if (counter++ == 0)
 					{
 						this.Debug("Skipping header row: " + string.Join(",", donorParts));
 						continue;
 					}
-					
+
 					if (donorParts.Length == 4)
 					{
 						tags[donorParts[1]] = new Tag(donorParts[0], donorParts[1], donorParts[2], donorParts[3], "");
