@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System;
 using Smod2.API;
+using Microsoft.VisualBasic.FileIO;
 
 namespace DonorTag
 {
@@ -14,7 +15,7 @@ namespace DonorTag
 		name = "DonorTag",
 		description = "Gives donors fancy tags",
 		id = "com.thecreepercow.donortag",
-		version = "4.1.10",
+		version = "4.2.10",
 		SmodMajor = 3,
 		SmodMinor = 1,
 		SmodRevision = 17)]
@@ -41,75 +42,43 @@ namespace DonorTag
 		public Dictionary<string, Tag> getDonorTags()
 		{
 			Dictionary<string, Tag> tags = new Dictionary<string, Tag>();
-			if (this.GetConfigBool("donor_tags_use_config_mode"))
+			if (!File.Exists("DonorTags.csv"))
 			{
-				string[] donors = this.GetConfigList("donor_tags");
-				for (int i = 0; i < donors.Length; i++)
+				//File.Create("DonorTags.csv");
+				File.AppendAllText("DonorTags.csv", "discord,steam,rank,color,group" + Environment.NewLine);
+				this.Debug("Created DonorTags.csv with header row: discord,steam,rank,color,group");
+			}
+
+			using (TextFieldParser reader = new TextFieldParser("DonorTags.csv"))
+			{
+				reader.TextFieldType = FieldType.Delimited;
+				reader.SetDelimiters(",");
+				reader.HasFieldsEnclosedInQuotes = true;
+				List<String[]> rows = new List<String[]>();
+				int counter = 0;
+				while (!reader.EndOfData)
 				{
-					string donor = donors[i];
-					string[] donorParts = donor.Split(';');
-					if (donorParts.Length < 3)
+					string[] donorParts = reader.ReadFields();
+					if (counter == 0)
 					{
-						this.Warn("Invalid donor tag in configuration: " + donor);
+						this.Debug("Skipping header row: " + string.Join(",", donorParts));
 						continue;
 					}
-					else if (donorParts.Length == 3)
+					
+					if (donorParts.Length == 4)
 					{
-						tags[donorParts[0]] = new Tag("", donorParts[0], donorParts[1], donorParts[2], "");
+						tags[donorParts[1]] = new Tag(donorParts[0], donorParts[1], donorParts[2], donorParts[3], "");
+						this.Debug("Adding tag: " + tags[donorParts[1]]);
 					}
-					else if (donorParts.Length == 4)
+					else if (donorParts.Length == 5)
 					{
-						tags[donorParts[0]] = new Tag("", donorParts[0], donorParts[1], donorParts[2], donorParts[3]);
+						tags[donorParts[1]] = new Tag(donorParts[0], donorParts[1], donorParts[2], donorParts[3], donorParts[4]);
+						this.Debug("Adding tag: " + tags[donorParts[1]]);
 					}
 					else
 					{
-						this.Warn("Invalid donor tag in configuration: " + donor);
+						this.Warn("Invalid donor tag in configuration missing : " + string.Join(",", donorParts));
 						continue;
-					}
-				}
-			}
-			else
-			{
-				if (!File.Exists("DonorTags.csv"))
-				{
-					//File.Create("DonorTags.csv");
-					File.AppendAllText("DonorTags.csv", "discord,steam,rank,color,group" + Environment.NewLine);
-					this.Debug("Created DonorTags.csv with header row: discord,steam,rank,color,group");
-				}
-
-				using (var reader = new StreamReader("DonorTags.csv"))
-				{
-					List<String[]> rows = new List<String[]>();
-					while (!reader.EndOfStream)
-					{
-						var line = reader.ReadLine();
-						rows.Add(line.Split(','));
-					}
-					
-					for (int i = 0; i < rows.Count; i++)
-					{
-						if (i == 0)
-						{
-							this.Debug("Skipping header row: " + string.Join(",", rows[i]));
-							continue;
-						}
-
-						String[] donorParts = rows[i];
-						if (donorParts.Length == 4)
-						{
-							tags[donorParts[1]] = new Tag(donorParts[0], donorParts[1], donorParts[2], donorParts[3], "");
-							this.Debug("Adding tag: " + tags[donorParts[1]]);
-						}
-						else if (donorParts.Length == 5)
-						{
-							tags[donorParts[1]] = new Tag(donorParts[0], donorParts[1], donorParts[2], donorParts[3], donorParts[4]);
-							this.Debug("Adding tag: " + tags[donorParts[1]]);
-						}
-						else
-						{
-							this.Warn("Invalid donor tag in configuration missing : " + string.Join(",", donorParts));
-							continue;
-						}
 					}
 				}
 			}
@@ -120,8 +89,6 @@ namespace DonorTag
 		{
 			this.AddEventHandler(typeof(IEventHandlerRoundStart), new RoundStartHandler(this), Priority.Highest);
 			this.AddEventHandler(typeof(IEventHandlerPlayerJoin), new JoinHandler(this), Priority.Highest);
-			this.AddConfig(new Smod2.Config.ConfigSetting("donor_tags_use_config_mode", false, Smod2.Config.SettingType.BOOL, true, "If a donor tags configuration setting exceeds 256, and especially 512 characters it will glitch our your server."));
-			this.AddConfig(new Smod2.Config.ConfigSetting("donor_tags", new string[] { }, Smod2.Config.SettingType.LIST, true, "Two-dimensional array of donor tags."));
 		}
 	}
 
